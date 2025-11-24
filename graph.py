@@ -7,13 +7,13 @@ class Node:
         self.weight = weight
         self.next = None
 
-class GraphLL:
+class Graph:
     def __init__(self):
         self.adj_list = {}
 
-    def add_vertex(self, v):
-        if v not in self.adj_list:
-            self.adj_list[v] = None
+    def add_vertex(self, vertex):
+        if vertex not in self.adj_list:
+            self.adj_list[vertex] = None
 
     def add_edge(self, u, v, w=1, undirected=True):
         self.add_vertex(u)
@@ -28,13 +28,58 @@ class GraphLL:
             new_node2.next = self.adj_list[v]
             self.adj_list[v] = new_node2
 
+    def delete_from_list(self, src, target):
+        head = self.adj_list.get(src)
+
+        if head is None:
+            return
+        
+        # Jika yang dihapus adalah node pertama (head)
+        if head.vertex == target:
+            self.adj_list[src] = head.next   
+            return
+        
+        # Jika node berada di tengah/belakang
+        prev = head
+        current = head.next
+        while current:
+            if current.vertex == target:
+                prev.next = current.next
+                return
+            prev = current
+            current = current.next
+
+        
+    def delete_edge(self, u, v, undirected = True):
+        self.delete_from_list(u, v)
+
+        if undirected:
+            self.delete_from_list(v, u)
+
+    def delete_vertex(self, v):
+
+        if v not in self.adj_list:
+            print("Vertex tidak ditemukan!")
+            return
+
+        # Hapus vertex sebagai key
+        del self.adj_list[v]
+
+        # Hapus vertex dari adjacency list lain
+        for u in self.adj_list:
+            self.delete_from_list(u, v)   
+
+        print(f"Vertex '{v}' berhasil dihapus.\n")
+
+
+
     def display(self):
         print("\n=== GRAPH (Linked List) ===")
         for vertex in self.adj_list:
             print(f"{vertex} -> ", end="") 
             temp = self.adj_list[vertex]
             while temp:
-                print(f"{temp.vertex}(w={temp.weight}) -> ", end="")
+                print(f"{temp.vertex}(w={temp.weight}) , ", end="")
                 temp = temp.next
             print("NULL")
         print()
@@ -114,7 +159,7 @@ def dijkstra(graph, start):
 
 
 def menu():
-    g = GraphLL()
+    g = Graph()
 
     while True:
         print("""
@@ -123,11 +168,13 @@ def menu():
 =============================
 1. Tambah Vertex
 2. Tambah Edge
-3. Tampilkan Graph
-4. BFS
-5. DFS
-6. Dijkstra
-7. Exit
+3. Hapus Vertex
+4. Hapus Edge
+5. Tampilkan Graph
+6. BFS
+7. DFS
+8. Dijkstra
+9. Exit
 =============================
 """)
 
@@ -146,9 +193,19 @@ def menu():
             print("Edge berhasil ditambahkan!\n")
 
         elif pilihan == "3":
-            g.display()
+            v = input("vertex yang ingin dihapus: ")
+            g.delete_vertex(v)
 
         elif pilihan == "4":
+            u = input("hapus edge dari vertex: ")
+            v = input("menuju vertex: ")
+            g.delete_edge(u, v)
+            print(f"edge antara vertex '{u} dan vertex '{v}' berhasil dihapus\n")
+
+        elif pilihan == "5":
+            g.display()
+
+        elif pilihan == "6":
             start = input("Mulai dari vertex: ")
             hasil = bfs(g, start)
             if hasil is None:
@@ -156,7 +213,7 @@ def menu():
             else:
                 print("BFS:", hasil, "\n")
 
-        elif pilihan == "5":
+        elif pilihan == "7":
             start = input("Mulai dari vertex: ")
             hasil = dfs(g, start)
             if hasil is None:
@@ -164,7 +221,7 @@ def menu():
             else:
                 print("DFS:", hasil, "\n")
 
-        elif pilihan == "6":
+        elif pilihan == "8":
             start = input("Mulai dari vertex: ")
             hasil = dijkstra(g, start)
             if hasil is None:
@@ -172,7 +229,7 @@ def menu():
             else:
                 print("Dijkstra:", hasil, "\n")
 
-        elif pilihan == "7":
+        elif pilihan == "9":
             print("Program selesai.")
             break
 
