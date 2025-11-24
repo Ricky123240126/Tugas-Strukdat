@@ -130,33 +130,177 @@ def dfs(graph, start):
     _dfs(start)
     return hasil
 
-
-# Dijkstra
-def dijkstra(graph, start):
+# djikstra (mencari shortest path tetapi tidak dapat mengatasi bobot/weight negatif)
+def dijkstra(graph, start, end=None):
+    # Jika start tidak ada di graph
     if start not in graph.adj_list:
         return None
 
+    # Inisialisasi jarak awal
     jarak = {v: float("inf") for v in graph.adj_list}
     jarak[start] = 0
 
+    # Prioritas queue (minimal-heap)
     heap = [(0, start)]
 
+    # Proses Dijkstra
     while heap:
         curr_dist, node = heapq.heappop(heap)
 
+        # Skip node yang jaraknya sudah bukan paling kecil
         if curr_dist > jarak[node]:
             continue
+
+        # Jika mencari 1 tujuan 
+        if end is not None and node == end:
+            return jarak[end]
 
         temp = graph.adj_list[node]
         while temp:
             new_dist = curr_dist + temp.weight
+
             if new_dist < jarak[temp.vertex]:
                 jarak[temp.vertex] = new_dist
                 heapq.heappush(heap, (new_dist, temp.vertex))
+
             temp = temp.next
 
-    return jarak
+    # Jika end = None 
+    if end is None:
+        return jarak
 
+    # Jika end ada tetapi tidak terhubung
+    return float("inf")
+
+# prim (Mencari pohon rentang minimum / minimum spanning stree dari graph berbobot)
+def prim(graph, start):
+    if start not in graph.adj_list:
+        return None
+    
+    visited = set([start])
+    edges = []
+    mst_edges = []
+    total_weight = 0
+    
+    # Ambil semua edge dari start
+    temp = graph.adj_list[start]
+    while temp:
+        heapq.heappush(edges, (temp.weight, start, temp.vertex))
+        temp = temp.next
+    
+    while edges and len(visited) < len(graph.adj_list):
+        weight, u, v = heapq.heappop(edges)
+        
+        if v not in visited:
+            visited.add(v)
+            mst_edges.append((u, v, weight))
+            total_weight += weight
+            
+            # Tambahkan edge dari v
+            temp = graph.adj_list[v]
+            while temp:
+                if temp.vertex not in visited:
+                    heapq.heappush(edges, (temp.weight, v, temp.vertex))
+                temp = temp.next
+    
+    return mst_edges, total_weight
+
+# kruskal (Algoritma lain untuk minimum spanning tree menggunakan Union-Find)
+def kruskal(graph):
+    # Kumpulkan semua edge
+    edges = []
+    for u in graph.adj_list:
+        temp = graph.adj_list[u]
+        while temp:
+            # Hindari duplikat untuk undirected graph
+            if u < temp.vertex:
+                edges.append((temp.weight, u, temp.vertex))
+            temp = temp.next
+    
+    # Sort berdasarkan weight
+    edges.sort()
+    
+    # Union-Find
+    parent = {v: v for v in graph.adj_list}
+    
+    def find(x):
+        if parent[x] != x:
+            parent[x] = find(parent[x])
+        return parent[x]
+    
+    def union(x, y):
+        root_x = find(x)
+        root_y = find(y)
+        if root_x != root_y:
+            parent[root_x] = root_y
+            return True
+        return False
+    
+    mst_edges = []
+    total_weight = 0
+    
+    for weight, u, v in edges:
+        if union(u, v):
+            mst_edges.append((u, v, weight))
+            total_weight += weight
+    
+    return mst_edges, total_weight
+
+# bellman-ford (mencari shortest path tetapi dapat mengatasi bobot/weight negatif)
+def bellman_ford(graph, start):
+    if start not in graph.adj_list:
+        return None
+    
+    # Inisialisasi jarak
+    jarak = {v: float("inf") for v in graph.adj_list}
+    jarak[start] = 0
+    
+    # Relaksasi |V|-1 kali
+    for _ in range(len(graph.adj_list) - 1):
+        for u in graph.adj_list:
+            temp = graph.adj_list[u]
+            while temp:
+                if jarak[u] != float("inf") and jarak[u] + temp.weight < jarak[temp.vertex]:
+                    jarak[temp.vertex] = jarak[u] + temp.weight
+                temp = temp.next
+    
+    # Deteksi negative cycle
+    for u in graph.adj_list:
+        temp = graph.adj_list[u]
+        while temp:
+            if jarak[u] != float("inf") and jarak[u] + temp.weight < jarak[temp.vertex]:
+                return None, "Negative cycle terdeteksi!"
+            temp = temp.next
+    
+    return jarak, None
+
+# Floyd-warshall (Mencari shortest path antara semua pasangan vertex)
+def floyd_warshall(graph):
+    vertices = list(graph.adj_list.keys())
+    n = len(vertices)
+    
+    # Inisialisasi matrix jarak
+    dist = {v: {u: float("inf") for u in vertices} for v in vertices}
+    
+    # Jarak ke diri sendiri = 0
+    for v in vertices:
+        dist[v][v] = 0
+    
+    # Isi jarak dari edge yang ada
+    for u in graph.adj_list:
+        temp = graph.adj_list[u]
+        while temp:
+            dist[u][temp.vertex] = temp.weight
+            temp = temp.next
+    
+    # Floyd-Warshall
+    for k in vertices:
+        for i in vertices:
+            for j in vertices:
+                if dist[i][k] + dist[k][j] < dist[i][j]:
+                    dist[i][j] = dist[i][k] + dist[k][j]
+    
+    return dist
 
 def menu():
     g = Graph()
@@ -173,8 +317,12 @@ def menu():
 5. Tampilkan Graph
 6. BFS
 7. DFS
-8. Dijkstra
-9. Exit
+8. Djikstra
+9. Prim
+10. Kruskal
+11. Bellman-Ford
+12. Floyd-warshall
+0. Exit
 =============================
 """)
 
@@ -228,8 +376,41 @@ def menu():
                 print("Vertex tidak ditemukan!\n")
             else:
                 print("Dijkstra:", hasil, "\n")
-
+                
         elif pilihan == "9":
+            start = input("Mulai dari vertex: ")
+            hasil = prim(g, start)
+            if hasil is None:
+                print("Vertex tidak ditemukan!\n")
+            else:
+                edges, total = hasil
+                print("Prim's MST:", edges)
+                print("Total weight:", total, "\n")
+
+        elif pilihan == "10":
+            hasil = kruskal(g)
+            edges, total = hasil
+            print("Kruskal's MST:", edges)
+            print("Total weight:", total, "\n")
+
+        elif pilihan == "11":
+            start = input("Mulai dari vertex: ")
+            hasil, error = bellman_ford(g, start)
+            if error:
+                print(error, "\n")
+            elif hasil is None:
+                print("Vertex tidak ditemukan!\n")
+            else:
+                print("Bellman-Ford:", hasil, "\n")
+
+        elif pilihan == "12":
+            hasil = floyd_warshall(g)
+            print("\n=== Floyd-Warshall (All Pairs) ===")
+            for u in hasil:
+                print(f"Dari {u}: {hasil[u]}")
+            print()
+
+        elif pilihan == "0":
             print("Program selesai.")
             break
 
