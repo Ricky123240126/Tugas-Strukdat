@@ -2,7 +2,7 @@
 using namespace std;
 
 struct Edge {
-    int u, v, bobot;
+    int u, v, bobot; //u = asal, v = tujuan
 };
 
 const int MAX = 50;
